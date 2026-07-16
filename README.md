@@ -206,79 +206,35 @@ int main()
 
 ## Build
 
-From the module directory:
+From the module directory, use the Vix workflow:
 
 ```bash
-cmake -S . -B build
-cmake --build build
+vix build
 ```
 
-To disable tests:
+For a release build:
 
 ```bash
-cmake -S . -B build -DCGRIDE_ENGINE_BUILD_TESTS=OFF
-cmake --build build
+vix build --preset release
 ```
 
 ## Run tests
 
 ```bash
-ctest --test-dir build --output-on-failure
+vix check --tests
 ```
 
-Or run them directly:
+Or run the test command directly:
 
 ```bash
-./build/tests/cgride_engine_build_options_test
-./build/tests/cgride_engine_build_request_test
-./build/tests/cgride_engine_build_result_test
-./build/tests/cgride_engine_build_plan_test
-./build/tests/cgride_engine_planner_test
-./build/tests/cgride_engine_build_engine_test
+vix tests
 ```
 
 ## Install
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-cmake --install build
+vix install
 ```
 
-The installed CMake package exposes:
+The install step exposes the `cgride::engine` integration target, public headers, and package metadata.
 
-```cmake
-find_package(cgride-engine CONFIG REQUIRED)
-
-target_link_libraries(my_target
-  PRIVATE
-    cgride::engine
-)
-```
-
-## Design rules
-
-The engine should:
-
-- return explicit results instead of terminating the process
-- keep terminal output outside the engine
-- keep CLI parsing outside the engine
-- keep configuration file parsing outside the engine
-- use structured errors and diagnostics
-- connect modules without merging their responsibilities
-- remain embeddable in other native applications
-
-## Current status
-
-This module currently provides:
-
-- build options
-- build requests
-- build results
-- build plans
-- planner foundation
-- build engine orchestration
-- CMake package integration
-- unit tests for the public API
-
-The next major step is real planning: generating graph tasks from project targets, source files, dependencies, toolchain commands, cache keys, and expected outputs.
