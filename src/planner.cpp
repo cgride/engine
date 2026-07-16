@@ -29,6 +29,7 @@
 #include <cgride/project/source_set.hpp>
 #include <cgride/project/target.hpp>
 #include <cgride/project/target_kind.hpp>
+#include <cgride/project/visibility.hpp>
 #include <cgride/toolchains/archive_command.hpp>
 #include <cgride/toolchains/artifact_kind.hpp>
 #include <cgride/toolchains/compile_command.hpp>
@@ -133,7 +134,39 @@ namespace cgride::engine
     {
       for (const auto &requirement : target.requirements().entries())
       {
-        if (!requirement.valid())
+        if (!requirement.valid() || !cgride::project::applies_to_self(requirement.visibility()))
+        {
+          continue;
+        }
+
+        switch (requirement.kind())
+        {
+        case cgride::project::RequirementKind::IncludeDirectory:
+          compile_options.include_directories.push_back(requirement.path());
+          break;
+
+        case cgride::project::RequirementKind::CompileDefinition:
+          compile_options.definitions.push_back(requirement.value());
+          break;
+
+        case cgride::project::RequirementKind::CompileOption:
+          compile_options.options.push_back(requirement.value());
+          break;
+
+        case cgride::project::RequirementKind::LinkOption:
+        case cgride::project::RequirementKind::LinkLibrary:
+          break;
+        }
+      }
+    }
+
+    void append_usage_requirements(
+        const cgride::project::Target &target,
+        cgride::toolchains::CompileCommandOptions &compile_options)
+    {
+      for (const auto &requirement : target.requirements().entries())
+      {
+        if (!requirement.valid() || !cgride::project::propagates_to_dependents(requirement.visibility()))
         {
           continue;
         }
@@ -165,7 +198,36 @@ namespace cgride::engine
     {
       for (const auto &requirement : target.requirements().entries())
       {
-        if (!requirement.valid())
+        if (!requirement.valid() || !cgride::project::applies_to_self(requirement.visibility()))
+        {
+          continue;
+        }
+
+        switch (requirement.kind())
+        {
+        case cgride::project::RequirementKind::LinkOption:
+          link_options.options.push_back(requirement.value());
+          break;
+
+        case cgride::project::RequirementKind::LinkLibrary:
+          link_options.libraries.push_back(requirement.value());
+          break;
+
+        case cgride::project::RequirementKind::IncludeDirectory:
+        case cgride::project::RequirementKind::CompileDefinition:
+        case cgride::project::RequirementKind::CompileOption:
+          break;
+        }
+      }
+    }
+
+    void append_link_usage_requirements(
+        const cgride::project::Target &target,
+        cgride::toolchains::LinkCommandOptions &link_options)
+    {
+      for (const auto &requirement : target.requirements().entries())
+      {
+        if (!requirement.valid() || !cgride::project::propagates_to_dependents(requirement.visibility()))
         {
           continue;
         }
@@ -227,6 +289,21 @@ namespace cgride::engine
         options.optimize = request.options().mode() == BuildMode::Release;
 
         append_target_requirements(target, options);
+
+        for (const auto &link : target.target_links())
+        {
+          if (!link.valid())
+          {
+            continue;
+          }
+
+          const auto *dependency = request.project().value().find_target(link.target_name());
+
+          if (dependency != nullptr)
+          {
+            append_usage_requirements(*dependency, options);
+          }
+        }
 
         auto command = cgride::toolchains::make_compile_command(
             request.toolchain().value(),
@@ -333,6 +410,28 @@ namespace cgride::engine
         if (found->second.artifact_task.has_value())
         {
           dependencies.push_back(found->second.artifact_task.value());
+        }
+      }
+
+      for (const auto &link : target.target_links())
+      {
+        if (!link.valid())
+        {
+          continue;
+        }
+
+        const auto found = planned_targets.find(link.target_name());
+
+        if (found == planned_targets.end())
+        {
+          continue;
+        }
+
+        const auto *dependency = request.project().value().find_target(link.target_name());
+
+        if (dependency != nullptr)
+        {
+          append_link_usage_requirements(*dependency, options);
         }
       }
 

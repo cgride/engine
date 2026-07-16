@@ -16,6 +16,7 @@
 #include <cgride/engine/build_engine.hpp>
 
 #include <chrono>
+#include <string>
 #include <utility>
 
 #include <cgride/core/error.hpp>
@@ -113,10 +114,66 @@ namespace cgride::engine
           elapsed_since(started_at));
     }
 
+    auto task_results = std::move(executed.value());
+
+    for (const auto &task_result : task_results)
+    {
+      if (!task_result.failed())
+      {
+        continue;
+      }
+
+      if (task_result.process_result().has_value() &&
+          task_result.process_result().value().error().has_value())
+      {
+        const auto &process = task_result.process_result().value();
+        const auto &process_error = process.error().value();
+        auto detail = process.standard_error().empty()
+                          ? process.standard_output()
+                          : process.standard_error();
+
+        if (detail.empty())
+        {
+          const auto task_name = task_result.task_name().empty()
+                                     ? std::string(task_result.task_id().value())
+                                     : task_result.task_name();
+          const auto exit_detail = process_error.detail().value_or(std::string{});
+          detail = exit_detail.empty() ? task_name : task_name + " (" + exit_detail + ")";
+        }
+
+        auto result = BuildResult::failed(
+            Error(
+                process_error.code(),
+                process_error.message(),
+                detail),
+            elapsed_since(started_at));
+        result.task_results(std::move(task_results));
+        return result;
+      }
+
+      if (task_result.error().has_value())
+      {
+        auto result = BuildResult::failed(
+            task_result.error().value(),
+            elapsed_since(started_at));
+        result.task_results(std::move(task_results));
+        return result;
+      }
+
+      auto result = BuildResult::failed(
+          Error(
+              ErrorCode::ProcessFailed,
+              "Build task failed.",
+              task_result.message().empty() ? std::string(task_result.task_id().value()) : task_result.message()),
+          elapsed_since(started_at));
+      result.task_results(std::move(task_results));
+      return result;
+    }
+
     BuildResult result = BuildResult::succeeded(
         elapsed_since(started_at));
 
-    result.task_results(std::move(executed.value()));
+    result.task_results(std::move(task_results));
 
     return result;
   }
