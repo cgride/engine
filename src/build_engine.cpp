@@ -48,6 +48,7 @@ namespace cgride::engine
           .jobs(options.jobs())
           .dry_run(options.dry_run())
           .capture_output(true)
+          .skip_up_to_date(options.use_cache() && !options.rebuild())
           .stop_on_failure(true);
 
       if (options.has_event_handler())
