@@ -24,19 +24,36 @@ namespace
 {
   [[nodiscard]] cgride::project::Project make_project()
   {
-    return cgride::project::Project{};
+    cgride::project::Project project("app");
+
+    project.executable("app").source("src/main.cpp");
+
+    return project;
   }
 
   [[nodiscard]] cgride::toolchains::Toolchain make_toolchain()
   {
-    return cgride::toolchains::Toolchain{};
+    cgride::toolchains::Toolchain toolchain(
+        cgride::toolchains::CompilerKind::Gcc,
+        "GCC");
+
+    toolchain
+        .cxx_compiler("c++")
+        .archiver("ar")
+        .linker("c++");
+
+    return toolchain;
   }
 
   [[nodiscard]] cgride::engine::BuildRequest make_request()
   {
+    auto options = cgride::engine::BuildOptions::defaults();
+    options.dry_run(true);
+
     return cgride::engine::BuildRequest(
         make_project(),
-        make_toolchain());
+        make_toolchain(),
+        options);
   }
 
 } // namespace
@@ -64,6 +81,7 @@ int main()
 
     assert(plan.valid());
     assert(plan.build_directory() == std::filesystem::path("build"));
+    assert(plan.graph().size() == 2);
   }
 
   {
@@ -177,23 +195,18 @@ int main()
 
     auto result = engine.build(make_request());
 
-    /*
-     * The first planner implementation creates an empty graph. The executor
-     * rejects that graph, so the build fails cleanly instead of pretending a
-     * real build happened.
-     */
-    assert(result.failed());
+    assert(result.success());
     assert(result.finished());
-    assert(result.has_error());
-    assert(result.task_results().empty());
+    assert(!result.has_error());
+    assert(!result.task_results().empty());
   }
 
   {
     auto result = cgride::engine::build(make_request());
 
-    assert(result.failed());
+    assert(result.success());
     assert(result.finished());
-    assert(result.has_error());
+    assert(!result.has_error());
   }
 
   {
@@ -212,9 +225,10 @@ int main()
 
     auto result = engine.build(request);
 
-    assert(result.failed());
+    assert(result.success());
     assert(result.finished());
-    assert(result.has_error());
+    assert(!result.has_error());
+    assert(!result.task_results().empty());
   }
 
   return 0;

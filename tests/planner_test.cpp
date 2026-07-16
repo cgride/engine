@@ -23,12 +23,25 @@ namespace
 {
   [[nodiscard]] cgride::project::Project make_project()
   {
-    return cgride::project::Project{};
+    cgride::project::Project project("app");
+
+    project.executable("app").source("src/main.cpp");
+
+    return project;
   }
 
   [[nodiscard]] cgride::toolchains::Toolchain make_toolchain()
   {
-    return cgride::toolchains::Toolchain{};
+    cgride::toolchains::Toolchain toolchain(
+        cgride::toolchains::CompilerKind::Gcc,
+        "GCC");
+
+    toolchain
+        .cxx_compiler("c++")
+        .archiver("ar")
+        .linker("c++");
+
+    return toolchain;
   }
 
 } // namespace
@@ -95,6 +108,7 @@ int main()
     assert(plan.build_directory() == std::filesystem::path("build"));
     assert(!plan.has_targets());
     assert(plan.target_count() == 0);
+    assert(plan.graph().size() == 2);
   }
 
   {
@@ -124,6 +138,7 @@ int main()
     assert(plan.has_targets());
     assert(plan.target_count() == 1);
     assert(plan.targets()[0] == "app");
+    assert(plan.graph().size() == 2);
   }
 
   {
@@ -131,7 +146,7 @@ int main()
 
     options
         .build_directory("out")
-        .target("core");
+        .target("app");
 
     cgride::engine::BuildRequest request(
         make_project(),
@@ -147,7 +162,7 @@ int main()
     assert(plan.valid());
     assert(plan.build_directory() == std::filesystem::path("out"));
     assert(plan.has_targets());
-    assert(plan.targets()[0] == "core");
+    assert(plan.targets()[0] == "app");
   }
 
   {
