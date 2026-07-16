@@ -18,9 +18,12 @@
 
 #include <cstddef>
 #include <filesystem>
+#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>
+
+#include <cgride/core/event.hpp>
 
 namespace cgride::engine
 {
@@ -53,6 +56,8 @@ namespace cgride::engine
   class BuildOptions
   {
   public:
+    using EventHandler = std::function<void(const cgride::core::Event &)>;
+
     /**
      * @brief Construct default build options.
      */
@@ -169,6 +174,31 @@ namespace cgride::engine
     BuildOptions &verbose(bool value) noexcept;
 
     /**
+     * @brief Set a structured build event handler.
+     *
+     * @param handler Event handler called from the executor thread.
+     * @return Reference to these options.
+     */
+    BuildOptions &on_event(EventHandler handler);
+
+    /**
+     * @brief Clear the structured build event handler.
+     *
+     * @return Reference to these options.
+     */
+    BuildOptions &clear_event_handler() noexcept;
+
+    /**
+     * @brief Access the configured event handler.
+     */
+    [[nodiscard]] const EventHandler &event_handler() const noexcept;
+
+    /**
+     * @brief Return true when an event handler is configured.
+     */
+    [[nodiscard]] bool has_event_handler() const noexcept;
+
+    /**
      * @brief Access the build directory.
      */
     [[nodiscard]] const std::filesystem::path &build_directory() const noexcept;
@@ -244,6 +274,7 @@ namespace cgride::engine
     bool hash_cache_inputs_{false};
     bool dry_run_{false};
     bool verbose_{false};
+    EventHandler event_handler_{};
   };
 
 } // namespace cgride::engine

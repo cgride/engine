@@ -50,6 +50,11 @@ namespace cgride::engine
           .capture_output(true)
           .stop_on_failure(true);
 
+      if (options.has_event_handler())
+      {
+        execution_options.on_event(options.event_handler());
+      }
+
       return execution_options;
     }
 

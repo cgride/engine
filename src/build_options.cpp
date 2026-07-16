@@ -130,6 +130,28 @@ namespace cgride::engine
     return *this;
   }
 
+  BuildOptions &BuildOptions::on_event(EventHandler handler)
+  {
+    event_handler_ = std::move(handler);
+    return *this;
+  }
+
+  BuildOptions &BuildOptions::clear_event_handler() noexcept
+  {
+    event_handler_ = {};
+    return *this;
+  }
+
+  const BuildOptions::EventHandler &BuildOptions::event_handler() const noexcept
+  {
+    return event_handler_;
+  }
+
+  bool BuildOptions::has_event_handler() const noexcept
+  {
+    return static_cast<bool>(event_handler_);
+  }
+
   const std::filesystem::path &BuildOptions::build_directory() const noexcept
   {
     return build_directory_;
