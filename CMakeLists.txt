@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.22)
 
 project(
   cgride-engine
-  VERSION 0.1.0
+  VERSION 0.1.1
   DESCRIPTION "Build orchestration engine for Cgride."
   HOMEPAGE_URL "https://github.com/cgride/engine"
   LANGUAGES CXX
